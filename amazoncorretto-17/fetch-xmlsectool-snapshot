@@ -1,0 +1,85 @@
+#!/bin/bash
+
+#
+# Fetch the Shibboleth SNAPSHOT release to use.
+#
+# Requires:
+#
+# - wget
+# - xsltproc
+#
+
+#
+# Exit when any command fails
+#
+set -e
+
+#
+# Destination directory
+#
+DEST=fetched-${XMLSECTOOL_RELEASE}-$(date +%F)
+DEST2=fetched
+
+# Maven coordinates
+MVN_G=net.shibboleth.tool
+MVN_A=xmlsectool
+MVN_R=snapshots
+MVN_V=$XMLSECTOOL_RELEASE-SNAPSHOT
+
+# Where to get things from
+DIST_DIR=https://build.shibboleth.net/maven/$MVN_R/net/shibboleth/tool/$MVN_A/$MVN_V
+echo "DIST_DIR: $DIST_DIR"
+PREFIX=$MVN_A-$MVN_V
+echo "PREFIX: $PREFIX"
+
+#
+# Pull the distribution's Maven metadata file.
+#
+META_TMP=maven-metadata.tmp
+rm -f $META_TMP
+wget -q -O $META_TMP $DIST_DIR/maven-metadata.xml
+
+#
+# Figure out what the latest version is called.
+#
+VSN_VALUE=`xsltproc snapshot-zip-version.xsl $META_TMP`
+echo "VSN_VALUE: $VSN_VALUE"
+SRC_URI=$DIST_DIR/$MVN_A-$VSN_VALUE-bin.zip
+echo "SRC_URI: $SRC_URI"
+
+#
+# Clean temporary file.
+#
+rm -f $META_TMP
+
+# Fetch everything into a clean download directory
+rm -rf $DEST
+mkdir $DEST
+cd $DEST
+
+# Fetch the release
+ARCHIVE=$PREFIX.bin.zip
+echo "ARCHIVE: ${ARCHIVE}"
+wget -O $ARCHIVE      $SRC_URI
+wget -O $ARCHIVE.sha1 $SRC_URI.sha1
+
+# Rewrite the SHA-1 checksum with a file name
+checksum=$(cat $ARCHIVE.sha1)
+echo $checksum $ARCHIVE>$ARCHIVE.sha1
+
+# Verify SHA-1 checksum on release
+echo SHA-1 check for $ARCHIVE
+sha1sum --check $ARCHIVE.sha1
+
+# Unpack and rename to standard directories
+unzip $ARCHIVE
+mv $PREFIX xmlsectool-dist
+
+cd ..
+
+# Copy to normal "fetched" directory
+echo "Downloaded to $DEST, copying to $DEST2."
+rm -rf $DEST2
+cp -r $DEST $DEST2
+
+# End.
