@@ -47,10 +47,15 @@ ADD gpg-agent.conf /etc/gnupg/
 ADD profile.d/ /etc/profile.d/
 
 #
-# Install latest version of MDA and xmlsectool.
+# Install latest version of xmlsectool.
 #
 WORKDIR /opt
 COPY --from=fetcher /opt/xmlsectool       /opt/xmlsectool
+
+#
+# Add the test files.
+#
+ADD testing /opt/xmlsectool/testing
 
 #
 # Bootstrap script.
@@ -65,10 +70,9 @@ ENV userdir=/home/user
 WORKDIR ${userdir}
 
 #
-# Let the user modify the doc subdirectory and in particular
-# the examples within doc/wiki
+# Let the user modify the testing subdirectory.
 #
-#RUN chown -R user:user /opt/mda/doc
+RUN chown -R user:user /opt/xmlsectool/testing
 
 #
 # By default, run a login shell.
